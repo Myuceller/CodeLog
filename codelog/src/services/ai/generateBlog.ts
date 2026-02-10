@@ -12,25 +12,29 @@ export async function generateBlogDraft(payload: BlogRequest): Promise<BlogResul
     model: 'gpt-4o-mini',
     messages: [
       { role: 'system', content: buildSystemPrompt(payload.style) },
-      { role: 'user', content: buildUserPrompt(payload.topic, payload.keywords) },
+      {
+        role: 'user',
+        content: buildUserPrompt(payload.topic, payload.keywords, {
+          language: payload.language,
+          tone: payload.tone,
+          length: payload.length,
+          includeCode: payload.includeCode,
+        }),
+      },
     ],
     max_tokens: 2000,
     temperature: 0.7,
   });
 
-  const content = completion.choices[0]?.message?.content ?? '';
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    parsed = {
-      title: '생성 실패',
-      content,
-      hashtags: [],
-      metaDescription: '',
-    };
+  if (completion.usage) {
+    console.info('[openai usage]', {
+      prompt_tokens: completion.usage.prompt_tokens,
+      completion_tokens: completion.usage.completion_tokens,
+      total_tokens: completion.usage.total_tokens,
+    });
   }
 
+  const content = completion.choices[0]?.message?.content ?? '';
+  const parsed = JSON.parse(content);
   return blogResultSchema.parse(parsed);
 }
