@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   Copy,
@@ -38,13 +38,7 @@ export function ResultScreen({
 }: ResultScreenProps) {
   const [activeTab, setActiveTab] = useState<Tab>("preview");
   const [copied, setCopied] = useState(false);
-  const [editedContent, setEditedContent] = useState("");
-
-  useEffect(() => {
-    if (result?.content) {
-      setEditedContent(result.content);
-    }
-  }, [result?.content]);
+  const [editedContent, setEditedContent] = useState(result?.content ?? "");
 
   const handleCopy = async () => {
     if (!editedContent) return;

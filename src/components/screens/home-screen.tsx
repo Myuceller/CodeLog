@@ -75,6 +75,7 @@ const styleLabel: Record<string, string> = {
   troubleshooting: "트러블슈팅",
   deepdive: "딥다이브",
 };
+const NOW_MS = Date.now();
 
 function formatDate(date: string) {
   const d = new Date(date);
@@ -94,8 +95,7 @@ export function HomeScreen({
   const totalCount = recent.length;
   const weekCount = recent.filter((item) => {
     const created = new Date(item.createdAt).getTime();
-    const now = Date.now();
-    const diffDays = (now - created) / (1000 * 60 * 60 * 24);
+    const diffDays = (NOW_MS - created) / (1000 * 60 * 60 * 24);
     return diffDays <= 7;
   }).length;
 

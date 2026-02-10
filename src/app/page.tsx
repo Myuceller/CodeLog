@@ -12,6 +12,7 @@ export default function Page() {
   const [currentPage, setCurrentPage] = useState("home");
   const [selectedTemplate, setSelectedTemplate] = useState("tutorial");
   const [generated, setGenerated] = useState<{
+    id: string;
     result: BlogResult;
     request: {
       topic: string;
@@ -38,20 +39,17 @@ export default function Page() {
         includeCode: boolean;
       };
     }[]
-  >([]);
-
-  useEffect(() => {
+  >(() => {
+    if (typeof window === "undefined") return [];
     try {
-      const raw = localStorage.getItem("codelog.history");
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as typeof history;
-      if (Array.isArray(parsed)) {
-        setHistory(parsed);
-      }
+      const raw = window.localStorage.getItem("codelog.history");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      // ignore
+      return [];
     }
-  }, []);
+  });
 
   useEffect(() => {
     localStorage.setItem("codelog.history", JSON.stringify(history));
@@ -73,7 +71,11 @@ export default function Page() {
             onNavigate={setCurrentPage}
             recent={sortedHistory.slice(0, 3)}
             onSelect={(item) => {
-              setGenerated({ result: item.result, request: item.request });
+              setGenerated({
+                id: item.id,
+                result: item.result,
+                request: item.request,
+              });
               setCurrentPage("result");
             }}
             selectedTemplate={selectedTemplate}
@@ -93,7 +95,7 @@ export default function Page() {
                 result,
                 request,
               };
-              setGenerated({ result, request });
+              setGenerated({ id: item.id, result, request });
               setHistory((prev) => [item, ...prev]);
             }}
             selectedTemplate={selectedTemplate}
@@ -102,6 +104,7 @@ export default function Page() {
         )}
         {currentPage === "result" && (
           <ResultScreen
+            key={generated?.id ?? "empty"}
             onNavigate={setCurrentPage}
             result={generated?.result || null}
             requestMeta={generated?.request || null}
@@ -109,10 +112,13 @@ export default function Page() {
         )}
         {currentPage === "history" && (
           <HistoryScreen
-            onNavigate={setCurrentPage}
             history={sortedHistory}
             onSelect={(item) => {
-              setGenerated({ result: item.result, request: item.request });
+              setGenerated({
+                id: item.id,
+                result: item.result,
+                request: item.request,
+              });
               setCurrentPage("result");
             }}
           />

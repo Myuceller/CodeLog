@@ -3,11 +3,14 @@ import { BlogRequest, BlogResult } from '@/models/dto/blog';
 import { buildSystemPrompt, buildUserPrompt } from '@/services/prompt/templates';
 import { blogResultSchema } from '@/lib/validation';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export async function generateBlogDraft(payload: BlogRequest): Promise<BlogResult> {
+  const openai = getClient();
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
