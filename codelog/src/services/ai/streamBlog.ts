@@ -13,7 +13,15 @@ export async function streamBlogDraft(payload: BlogRequest) {
     stream: true,
     messages: [
       { role: 'system', content: buildSystemPrompt(payload.style) },
-      { role: 'user', content: buildUserPrompt(payload.topic, payload.keywords) },
+      {
+        role: 'user',
+        content: buildUserPrompt(payload.topic, payload.keywords, {
+          language: payload.language,
+          tone: payload.tone,
+          length: payload.length,
+          includeCode: payload.includeCode,
+        }),
+      },
     ],
   });
 
