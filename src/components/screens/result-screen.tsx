@@ -93,6 +93,18 @@ export function ResultScreen({
           <p className="mt-1 text-sm text-muted-foreground">
             {result.title} {requestMeta ? `- ${requestMeta.style}` : ""}
           </p>
+          {result.hashtags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {result.hashtags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <button
@@ -198,6 +210,11 @@ export function ResultScreen({
                 <h1 className="text-2xl font-bold text-card-foreground">
                   {result.title}
                 </h1>
+                {result.metaDescription && (
+                  <blockquote className="mb-6 border-l-4 border-primary/40 bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
+                    {result.metaDescription}
+                  </blockquote>
+                )}
                 <ReactMarkdown>{editedContent}</ReactMarkdown>
               </article>
             )}

@@ -161,7 +161,7 @@ export function HistoryScreen({
                     {formatDate(post.createdAt)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {post.result.content.length.toLocaleString()}자
+                    {post.result.content.length}자
                   </span>
                 </div>
               </button>
