@@ -10,6 +10,7 @@ const openai = new OpenAI({
 export async function generateBlogDraft(payload: BlogRequest): Promise<BlogResult> {
   const completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
+    response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: buildSystemPrompt(payload.style) },
       {
@@ -35,6 +36,26 @@ export async function generateBlogDraft(payload: BlogRequest): Promise<BlogResul
   }
 
   const content = completion.choices[0]?.message?.content ?? '';
-  const parsed = JSON.parse(content);
-  return blogResultSchema.parse(parsed);
+  const parsed = parseModelJson(content);
+  const obj =
+    parsed && typeof parsed === 'object'
+      ? (parsed as Record<string, unknown>)
+      : {};
+  const normalized = {
+    ...obj,
+    hashtags: Array.isArray(obj.hashtags)
+      ? obj.hashtags.map((tag) => String(tag).replace(/^#/, ''))
+      : obj.hashtags,
+  };
+
+  return blogResultSchema.parse(normalized);
+}
+
+function parseModelJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const fenced = raw.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+    return JSON.parse(fenced);
+  }
 }
