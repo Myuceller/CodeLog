@@ -113,7 +113,6 @@ export default function Page() {
         )}
         {currentPage === "history" && (
           <HistoryScreen
-            onNavigate={setCurrentPage}
             history={sortedHistory}
             onSelect={(item) => {
               setGenerated({ result: item.result, request: item.request });

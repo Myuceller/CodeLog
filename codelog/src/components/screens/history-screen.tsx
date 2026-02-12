@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 interface HistoryScreenProps {
-  onNavigate: (page: string) => void;
   history: {
     id: string;
     createdAt: string;
@@ -56,7 +55,6 @@ function formatDate(date: string) {
 }
 
 export function HistoryScreen({
-  onNavigate,
   history,
   onSelect,
 }: HistoryScreenProps) {

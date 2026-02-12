@@ -69,7 +69,7 @@ ChartContainer.displayName = 'Chart'
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
-    ([_, config]) => config.theme || config.color,
+    ([, itemConfig]) => itemConfig.theme || itemConfig.color,
   )
 
   if (!colorConfig.length) {
@@ -319,7 +319,7 @@ ChartLegendContent.displayName = 'ChartLegend'
 // Helper to extract item config from a payload.
 function getPayloadConfigFromPayload(
   config: ChartConfig,
-  payload: Record<string, any> | null,
+  payload: Record<string, unknown> | null,
   key: string,
 ) {
   if (!payload) {

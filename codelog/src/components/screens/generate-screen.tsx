@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Sparkles,
   BookOpen,
@@ -57,7 +57,26 @@ export function GenerateScreen({
   const [length, setLength] = useState("medium");
   const [includeCode, setIncludeCode] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setProgress(0);
+      return;
+    }
+
+    setProgress(8);
+    const timer = window.setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 92) return prev;
+        const next = prev + Math.max(1, (100 - prev) * 0.08);
+        return Math.min(92, Math.round(next));
+      });
+    }, 220);
+
+    return () => window.clearInterval(timer);
+  }, [isGenerating]);
 
   const addKeyword = () => {
     if (keywordInput.trim() && !keywords.includes(keywordInput.trim())) {
@@ -100,6 +119,7 @@ export function GenerateScreen({
       }
 
       const result = await response.json();
+      setProgress(100);
       onGenerated(result, {
         topic,
         keywords,
@@ -109,6 +129,7 @@ export function GenerateScreen({
         length,
         includeCode,
       });
+      await new Promise((resolve) => setTimeout(resolve, 220));
       onNavigate("result");
     } catch (err) {
       setError(
@@ -136,7 +157,7 @@ export function GenerateScreen({
             <label className="mb-3 block text-sm font-semibold text-card-foreground">
               템플릿 선택
             </label>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {templates.map((t) => {
                 const Icon = t.icon;
                 const isSelected = selectedTemplate === t.id;
@@ -326,6 +347,19 @@ export function GenerateScreen({
               </>
             )}
           </button>
+          {isGenerating && (
+            <div className="mt-2">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-[width] duration-200 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="mt-1 text-right text-xs text-muted-foreground">
+                진행률 {progress}%
+              </p>
+            </div>
+          )}
           {error && (
             <p className="text-sm text-red-500" role="alert">
               {error}
