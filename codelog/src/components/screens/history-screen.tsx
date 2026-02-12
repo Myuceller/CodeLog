@@ -6,7 +6,6 @@ import {
   BookOpen,
   Lightbulb,
   Bug,
-  Layers,
   Clock,
   FileText,
   ChevronLeft,
@@ -37,7 +36,7 @@ interface HistoryScreenProps {
   onSelect: (item: HistoryScreenProps["history"][number]) => void;
 }
 
-const filterOptions = ["전체", "튜토리얼", "TIL", "트러블슈팅", "딥다이브"];
+const filterOptions = ["전체", "튜토리얼", "TIL", "트러블슈팅"];
 
 const styleMeta: Record<
   string,
@@ -46,7 +45,6 @@ const styleMeta: Record<
   tutorial: { label: "튜토리얼", icon: BookOpen },
   til: { label: "TIL", icon: Lightbulb },
   troubleshooting: { label: "트러블슈팅", icon: Bug },
-  deepdive: { label: "딥다이브", icon: Layers },
 };
 
 function formatDate(date: string) {
@@ -163,7 +161,7 @@ export function HistoryScreen({
                     {formatDate(post.createdAt)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {post.result.content.length.toLocaleString()}자
+                    {post.result.content.length}자
                   </span>
                 </div>
               </button>

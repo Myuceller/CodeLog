@@ -5,7 +5,6 @@ import {
   BookOpen,
   Lightbulb,
   Bug,
-  Layers,
   ArrowRight,
   FileText,
   Clock,
@@ -60,21 +59,14 @@ const templates = [
     icon: Bug,
     color: "bg-red-500/10 text-red-500",
   },
-  {
-    id: "deepdive",
-    title: "딥다이브",
-    desc: "특정 기술의 동작 원리를 깊이 분석하는 형식",
-    icon: Layers,
-    color: "bg-emerald-500/10 text-emerald-600",
-  },
 ];
 
 const styleLabel: Record<string, string> = {
   tutorial: "튜토리얼",
   til: "TIL",
   troubleshooting: "트러블슈팅",
-  deepdive: "딥다이브",
 };
+const NOW_MS = Date.now();
 
 function formatDate(date: string) {
   const d = new Date(date);
@@ -94,8 +86,7 @@ export function HomeScreen({
   const totalCount = recent.length;
   const weekCount = recent.filter((item) => {
     const created = new Date(item.createdAt).getTime();
-    const now = Date.now();
-    const diffDays = (now - created) / (1000 * 60 * 60 * 24);
+    const diffDays = (NOW_MS - created) / (1000 * 60 * 60 * 24);
     return diffDays <= 7;
   }).length;
 
@@ -111,9 +102,9 @@ export function HomeScreen({
   })();
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12">
+    <div className="mx-auto max-w-6xl space-y-14 px-6 py-10 md:py-12">
       {/* Hero */}
-      <section className="mb-16 text-center">
+      <section className="text-center">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground">
           <Sparkles className="h-3.5 w-3.5" />
           AI 기반 기술 블로그 자동 생성
@@ -138,14 +129,14 @@ export function HomeScreen({
       </section>
 
       {/* Templates */}
-      <section className="mb-16">
+      <section>
         <h2 className="mb-2 text-xl font-bold text-foreground">
           글 템플릿 선택
         </h2>
         <p className="mb-6 text-sm text-muted-foreground">
           작성하려는 글의 형식을 선택하세요
         </p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((t) => {
             const Icon = t.icon;
             return (
@@ -175,7 +166,7 @@ export function HomeScreen({
       </section>
 
       {/* Recent & Stats */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <section className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <h2 className="mb-4 text-lg font-bold text-foreground">
             최근 생성한 글
@@ -248,7 +239,7 @@ export function HomeScreen({
             })}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

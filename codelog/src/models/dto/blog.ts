@@ -1,4 +1,4 @@
-export type BlogStyle = 'tutorial' | 'til' | 'troubleshooting' | 'deepdive';
+export type BlogStyle = 'tutorial' | 'til' | 'troubleshooting';
 export type BlogTone = 'professional' | 'casual' | 'friendly';
 export type BlogLength = 'short' | 'medium' | 'long';
 export type BlogLanguage = 'ko' | 'en';

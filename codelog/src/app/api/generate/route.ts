@@ -5,6 +5,13 @@ import { blogRequestSchema } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OPENAI_API_KEY가 설정되지 않았습니다. .env.local을 확인해주세요.' },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const payload = blogRequestSchema.parse(body);
 
@@ -15,6 +22,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: '입력값이 올바르지 않습니다.' },
         { status: 400 }
+      );
+    }
+
+    const apiStatus =
+      typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      typeof (error as { status?: unknown }).status === 'number'
+        ? (error as { status: number }).status
+        : undefined;
+
+    if (apiStatus === 429) {
+      return NextResponse.json(
+        { error: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      );
+    }
+
+    if (apiStatus === 401) {
+      return NextResponse.json(
+        { error: 'API 키가 올바르지 않거나 설정되지 않았습니다.' },
+        { status: 401 }
       );
     }
 

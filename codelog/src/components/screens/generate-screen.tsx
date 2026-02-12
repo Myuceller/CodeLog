@@ -6,7 +6,6 @@ import {
   BookOpen,
   Lightbulb,
   Bug,
-  Layers,
   X,
   Plus,
   ChevronDown,
@@ -40,7 +39,6 @@ const templates = [
   { id: "tutorial", label: "튜토리얼", icon: BookOpen, color: "border-blue-500 bg-blue-500/10 text-blue-600" },
   { id: "til", label: "TIL", icon: Lightbulb, color: "border-amber-500 bg-amber-500/10 text-amber-600" },
   { id: "troubleshooting", label: "트러블슈팅", icon: Bug, color: "border-red-500 bg-red-500/10 text-red-500" },
-  { id: "deepdive", label: "딥다이브", icon: Layers, color: "border-emerald-500 bg-emerald-500/10 text-emerald-600" },
 ];
 
 const sampleKeywords = ["React", "useState", "컴포넌트", "상태관리"];

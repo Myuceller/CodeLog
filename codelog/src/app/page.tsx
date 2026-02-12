@@ -11,6 +11,7 @@ import type { BlogResult } from "@/models/dto/blog";
 export default function Page() {
   const [currentPage, setCurrentPage] = useState("home");
   const [selectedTemplate, setSelectedTemplate] = useState("tutorial");
+  const [isHistoryReady, setIsHistoryReady] = useState(false);
   const [generated, setGenerated] = useState<{
     result: BlogResult;
     request: {
@@ -42,20 +43,23 @@ export default function Page() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("codelog.history");
+      const raw = window.localStorage.getItem("codelog.history");
       if (!raw) return;
-      const parsed = JSON.parse(raw) as typeof history;
+      const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         setHistory(parsed);
       }
     } catch {
-      // ignore
+      setHistory([]);
+    } finally {
+      setIsHistoryReady(true);
     }
   }, []);
 
   useEffect(() => {
+    if (!isHistoryReady) return;
     localStorage.setItem("codelog.history", JSON.stringify(history));
-  }, [history]);
+  }, [history, isHistoryReady]);
 
   const sortedHistory = useMemo(() => {
     return [...history].sort(

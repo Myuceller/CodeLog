@@ -27,7 +27,7 @@ export function SiteHeader({ currentPage, onNavigate }: SiteHeaderProps) {
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="text-lg font-bold text-foreground">
-            TechPost AI
+            CodeLog
           </span>
         </button>
 
