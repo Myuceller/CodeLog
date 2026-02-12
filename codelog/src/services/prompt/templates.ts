@@ -39,13 +39,6 @@ const styleGuides: Record<BlogStyle, string> = {
 2) ## 원인 분석
 3) ## 해결 방법
 4) ## 결론`,
-  deepdive: `
-다음 제목을 정확히 사용하고, 순서대로 작성하세요:
-1) ## 개요
-2) ## 원리/배경
-3) ## 상세 분석
-4) ## 예시
-5) ## 결론`,
 };
 
 export function buildSystemPrompt(style: BlogStyle): string {

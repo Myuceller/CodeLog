@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const blogRequestSchema = z.object({
   topic: z.string().min(2).max(120),
   keywords: z.array(z.string().min(1).max(40)).max(15),
-  style: z.enum(['tutorial', 'til', 'troubleshooting', 'deepdive']),
+  style: z.enum(['tutorial', 'til', 'troubleshooting']),
   language: z.enum(['ko', 'en']).optional().default('ko'),
   tone: z.enum(['professional', 'casual', 'friendly']).optional().default('professional'),
   length: z.enum(['short', 'medium', 'long']).optional().default('medium'),
