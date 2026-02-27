@@ -134,7 +134,7 @@ export function ResultScreen({
       .slice(0, 60) || "codelog-post";
 
   const handleExportMarkdown = () => {
-    if (!editedContent) return;
+    if (!result || !editedContent) return;
     const filename = getSafeFilename(result.title);
     const blob = new Blob([editedContent], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -153,7 +153,7 @@ export function ResultScreen({
   };
 
   const handleExportHtml = () => {
-    if (!editedContent) return;
+    if (!result || !editedContent) return;
     const filename = getSafeFilename(result.title);
     const renderedHtml = previewRef.current?.innerHTML;
     const fallbackMarkdown = editedContent
