@@ -1,7 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-json";
 import {
   Copy,
   Download,
@@ -11,9 +19,9 @@ import {
   Code2,
   FileText,
   List,
-  Share2,
 } from "lucide-react";
 import type { BlogResult } from "@/models/dto/blog";
+import { useToast } from "@/hooks/use-toast";
 
 interface ResultScreenProps {
   onNavigate: (page: string) => void;
@@ -31,14 +39,85 @@ interface ResultScreenProps {
 
 type Tab = "preview" | "editor" | "raw";
 
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9가-힣\s-]/gi, "")
+    .replace(/\s+/g, "-");
+}
+
+function getNodeText(node: React.ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map((child) => getNodeText(child)).join("");
+  }
+  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+    return getNodeText(node.props.children);
+  }
+  return "";
+}
+
+function CodeBlock({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [copied, setCopied] = useState(false);
+  const codeWrapRef = useRef<HTMLDivElement | null>(null);
+  const codeText = String(children).replace(/\n$/, "");
+
+  useEffect(() => {
+    if (!codeWrapRef.current) return;
+    Prism.highlightAllUnder(codeWrapRef.current);
+  }, [className, children, copied]);
+
+  const handleCopyCode = async () => {
+    await navigator.clipboard.writeText(codeText);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
+  };
+
+  return (
+    <div ref={codeWrapRef} className="not-prose my-5">
+      <div className="mb-1 flex justify-end">
+        <button
+          type="button"
+          onClick={handleCopyCode}
+          className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+        >
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "복사됨" : "코드 복사"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950 p-4 text-[15px] leading-7 text-slate-100">
+        <code className={`${className ?? ""} font-mono text-[15px] leading-7`}>{children}</code>
+      </pre>
+    </div>
+  );
+}
+
 export function ResultScreen({
   onNavigate,
   result,
   requestMeta,
 }: ResultScreenProps) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("preview");
   const [copied, setCopied] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [editedContent, setEditedContent] = useState(result?.content ?? "");
+  const previewRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (activeTab !== "preview") return;
+    if (!previewRef.current) return;
+    Prism.highlightAllUnder(previewRef.current);
+  }, [activeTab, editedContent]);
 
   const handleCopy = async () => {
     if (!editedContent) return;
@@ -47,15 +126,86 @@ export function ResultScreen({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const getSafeFilename = (title: string) =>
+    title
+      .trim()
+      .replace(/[\\/:*?"<>|]/g, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 60) || "codelog-post";
+
+  const handleExportMarkdown = () => {
+    if (!editedContent) return;
+    const filename = getSafeFilename(result.title);
+    const blob = new Blob([editedContent], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${filename}.md`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    toast({
+      title: "내보내기 완료",
+      description: `${filename}.md 파일을 다운로드했습니다.`,
+    });
+    setIsExportMenuOpen(false);
+  };
+
+  const handleExportHtml = () => {
+    if (!editedContent) return;
+    const filename = getSafeFilename(result.title);
+    const renderedHtml = previewRef.current?.innerHTML;
+    const fallbackMarkdown = editedContent
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    const htmlDoc = `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${result.title}</title>
+  <style>
+    body { max-width: 860px; margin: 0 auto; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.7; }
+    pre { overflow-x: auto; padding: 16px; border-radius: 12px; background: #0f172a; color: #e2e8f0; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    blockquote { margin: 16px 0; padding-left: 12px; border-left: 4px solid #94a3b8; color: #475569; }
+  </style>
+</head>
+<body>
+  <article>${renderedHtml ?? `<pre>${fallbackMarkdown}</pre>`}</article>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlDoc], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${filename}.html`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    toast({
+      title: "내보내기 완료",
+      description: `${filename}.html 파일을 다운로드했습니다.`,
+    });
+    setIsExportMenuOpen(false);
+  };
+
+
   const toc = useMemo(() => {
     if (!editedContent) return [];
     return editedContent
       .split("\n")
-      .filter((line) => line.startsWith("#"))
+      .filter((line) => line.startsWith("## "))
       .map((line, index) => {
         const level = line.match(/^#+/)?.[0].length ?? 1;
         const label = line.replace(/^#+\s*/, "").trim();
-        return { id: `h-${index}`, label, level };
+        const id = slugifyHeading(label) || `section-${index}`;
+        return { id, label, level };
       });
   }, [editedContent]);
 
@@ -87,63 +237,6 @@ export function ResultScreen({
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">생성 결과</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {result.title} {requestMeta ? `- ${requestMeta.style}` : ""}
-          </p>
-          {result.hashtags.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {result.hashtags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
-          >
-            {copied ? (
-              <Check className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-            {copied ? "복사됨" : "복사"}
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
-          >
-            <Download className="h-4 w-4" />
-            내보내기
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
-          >
-            <Share2 className="h-4 w-4" />
-            공유
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate("generate")}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <RotateCcw className="h-4 w-4" />
-            다시 생성
-          </button>
-        </div>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-4">
         <aside className="hidden lg:block">
           <div className="sticky top-20 rounded-xl border bg-card p-5">
@@ -156,6 +249,12 @@ export function ResultScreen({
                 <button
                   key={item.id}
                   type="button"
+                  onClick={() => {
+                    const target = document.getElementById(item.id);
+                    if (target) {
+                      target.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                  }}
                   className="rounded-md px-3 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   {item.label}
@@ -183,6 +282,77 @@ export function ResultScreen({
         </aside>
 
         <div className="lg:col-span-3">
+          <div className="mb-6 flex flex-col gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold text-foreground">생성 결과</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {result.title} {requestMeta ? `- ${requestMeta.style}` : ""}
+              </p>
+              {result.hashtags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {result.hashtags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="inline-flex min-w-[96px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {copied ? "복사됨" : "복사"}
+              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                  className="inline-flex min-w-[96px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
+                >
+                  <Download className="h-4 w-4" />
+                  내보내기
+                </button>
+                {isExportMenuOpen && (
+                  <div className="absolute left-0 top-full z-20 mt-2 w-40 rounded-lg border bg-card p-1 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={handleExportMarkdown}
+                      className="block w-full rounded-md px-3 py-2 text-left text-sm text-card-foreground hover:bg-muted"
+                    >
+                      Markdown (.md)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportHtml}
+                      className="block w-full rounded-md px-3 py-2 text-left text-sm text-card-foreground hover:bg-muted"
+                    >
+                      HTML (.html)
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate("generate")}
+                className="inline-flex min-w-[112px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <RotateCcw className="h-4 w-4" />
+                다시 생성
+              </button>
+            </div>
+          </div>
+
           <div className="mb-4 flex gap-1 rounded-xl border bg-card p-1.5">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -206,7 +376,10 @@ export function ResultScreen({
 
           <div className="min-h-[600px] rounded-xl border bg-card p-8">
             {activeTab === "preview" && (
-              <article className="prose prose-sm max-w-none text-card-foreground">
+              <article
+                ref={previewRef}
+                className="prose prose-sm max-w-none text-card-foreground"
+              >
                 <h1 className="text-2xl font-bold text-card-foreground">
                   {result.title}
                 </h1>
@@ -215,7 +388,43 @@ export function ResultScreen({
                     {result.metaDescription}
                   </blockquote>
                 )}
-                <ReactMarkdown>{editedContent}</ReactMarkdown>
+                <ReactMarkdown
+                  components={{
+                    h2({ children }) {
+                      const headingText = getNodeText(children);
+                      const id = slugifyHeading(headingText);
+                      const isStepHeading = /^step\s*\d+/i.test(headingText);
+                      return (
+                        <h2
+                          id={id}
+                          className={
+                            isStepHeading
+                              ? "mt-8 scroll-mt-24 rounded-lg border-l-4 border-primary bg-primary/10 px-4 py-3 text-2xl font-extrabold tracking-tight text-foreground"
+                              : "mt-8 scroll-mt-24 text-2xl font-bold text-foreground"
+                          }
+                        >
+                          {children}
+                        </h2>
+                      );
+                    },
+                    code({ className, children, ...props }) {
+                      const isBlock = typeof className === "string" && className.includes("language-");
+                      if (isBlock) {
+                        return <CodeBlock className={className}>{children}</CodeBlock>;
+                      }
+                      return (
+                        <code
+                          className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em] text-foreground"
+                          {...props}
+                        >
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
+                >
+                  {editedContent}
+                </ReactMarkdown>
               </article>
             )}
             {activeTab === "editor" && (

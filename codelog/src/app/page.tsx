@@ -71,7 +71,7 @@ export default function Page() {
     <div className="min-h-screen bg-background">
       <SiteHeader currentPage={currentPage} onNavigate={setCurrentPage} />
 
-      <main>
+      <main className="pt-16">
         {currentPage === "home" && (
           <HomeScreen
             onNavigate={setCurrentPage}

@@ -16,22 +16,22 @@ const navItems = [
 
 export function SiteHeader({ currentPage, onNavigate }: SiteHeaderProps) {
   return (
-    <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
+    <header className="fixed inset-x-0 top-0 z-50 w-full min-w-full border-b bg-card/90 backdrop-blur-sm">
+      <div className="mx-auto flex h-16 min-h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <button
           type="button"
           onClick={() => onNavigate("home")}
-          className="flex items-center gap-2"
+          className="flex shrink-0 items-center gap-2"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold text-foreground">
+          <span className="whitespace-nowrap text-lg font-bold text-foreground">
             CodeLog
           </span>
         </button>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
@@ -40,14 +40,14 @@ export function SiteHeader({ currentPage, onNavigate }: SiteHeaderProps) {
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors sm:px-3 ${
                   isActive
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Icon className="h-4 w-4" />
-                {item.label}
+                <span className="hidden sm:inline">{item.label}</span>
               </button>
             );
           })}

@@ -1,13 +1,15 @@
 import OpenAI from 'openai';
-import { OpenAIStream, StreamingTextResponse } from 'ai';
 import { BlogRequest } from '@/models/dto/blog';
 import { buildSystemPrompt, buildUserPrompt } from '@/services/prompt/templates';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export async function streamBlogDraft(payload: BlogRequest) {
+  const openai = getClient();
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     stream: true,
@@ -25,6 +27,24 @@ export async function streamBlogDraft(payload: BlogRequest) {
     ],
   });
 
-  const stream = OpenAIStream(response);
-  return new StreamingTextResponse(stream);
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      for await (const chunk of response) {
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) {
+          controller.enqueue(encoder.encode(delta));
+        }
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
 }

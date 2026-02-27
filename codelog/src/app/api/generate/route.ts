@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'OPENAI_API_KEY가 설정되지 않았습니다. .env.local을 확인해주세요.' },
+        { error: 'OPENAI_API_KEY 환경변수가 설정되지 않았습니다. Vercel/로컬 환경설정을 확인해주세요.' },
         { status: 500 }
       );
     }

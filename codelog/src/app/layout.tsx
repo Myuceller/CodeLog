@@ -1,5 +1,6 @@
 import React from "react"
 import type { Metadata } from 'next'
+import { Toaster } from '@/components/ui/toaster'
 
 import './globals.css'
 
@@ -15,7 +16,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <Toaster />
+      </body>
     </html>
   )
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Sparkles,
   BookOpen,
@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Loader2,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface GenerateScreenProps {
   onNavigate: (page: string) => void;
@@ -57,32 +58,17 @@ export function GenerateScreen({
   const [length, setLength] = useState("medium");
   const [includeCode, setIncludeCode] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isGenerating) {
-      setProgress(0);
-      return;
-    }
-
-    setProgress(8);
-    const timer = window.setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 92) return prev;
-        const next = prev + Math.max(1, (100 - prev) * 0.08);
-        return Math.min(92, Math.round(next));
-      });
-    }, 220);
-
-    return () => window.clearInterval(timer);
-  }, [isGenerating]);
+  const isComposingKeyword = useRef(false);
+  const { toast } = useToast();
 
   const addKeyword = () => {
-    if (keywordInput.trim() && !keywords.includes(keywordInput.trim())) {
-      setKeywords([...keywords, keywordInput.trim()]);
-      setKeywordInput("");
-    }
+    const nextKeyword = keywordInput.trim();
+    if (!nextKeyword) return;
+
+    setKeywords((prev) =>
+      prev.includes(nextKeyword) ? prev : [...prev, nextKeyword]
+    );
+    setKeywordInput("");
   };
 
   const removeKeyword = (kw: string) => {
@@ -90,21 +76,69 @@ export function GenerateScreen({
   };
 
   const handleGenerate = async () => {
-    if (!topic.trim()) {
-      setError("주제를 입력해주세요.");
+    const normalizedTopic = topic.trim();
+    const normalizedKeywords = keywords
+      .map((keyword) => keyword.trim())
+      .filter(Boolean);
+
+    if (!normalizedTopic) {
+      toast({
+        title: "입력 확인",
+        description: "주제를 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (normalizedTopic.length < 2 || normalizedTopic.length > 120) {
+      toast({
+        title: "입력 확인",
+        description: "주제는 2자 이상 120자 이하로 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!/[A-Za-z0-9가-힣]/.test(normalizedTopic)) {
+      toast({
+        title: "입력 확인",
+        description: "주제에 글자/숫자를 포함해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (normalizedKeywords.length === 0 || normalizedKeywords.length > 15) {
+      toast({
+        title: "입력 확인",
+        description: "키워드는 1개 이상 15개 이하로 입력해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (normalizedKeywords.some((keyword) => keyword.length > 40)) {
+      toast({
+        title: "입력 확인",
+        description: "각 키워드는 40자 이하로 입력해주세요.",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsGenerating(true);
-    setError(null);
 
+    let timeoutId: number | undefined;
     try {
+      const controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller.abort(), 30000);
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
-          topic,
-          keywords,
+          topic: normalizedTopic,
+          keywords: normalizedKeywords,
           style: selectedTemplate,
           language,
           tone,
@@ -119,23 +153,33 @@ export function GenerateScreen({
       }
 
       const result = await response.json();
-      setProgress(100);
       onGenerated(result, {
-        topic,
-        keywords,
+        topic: normalizedTopic,
+        keywords: normalizedKeywords,
         style: selectedTemplate,
         language,
         tone,
         length,
         includeCode,
       });
-      await new Promise((resolve) => setTimeout(resolve, 220));
       onNavigate("result");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "글 생성에 실패했습니다."
-      );
+      const isTimeout =
+        err instanceof DOMException && err.name === "AbortError";
+      toast({
+        title: "글 생성 실패",
+        description:
+          isTimeout
+            ? "요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요."
+            : err instanceof Error
+              ? err.message
+              : "글 생성에 실패했습니다.",
+        variant: "destructive",
+      });
     } finally {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
       setIsGenerating(false);
     }
   };
@@ -227,7 +271,20 @@ export function GenerateScreen({
                 placeholder="키워드 입력 후 추가"
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addKeyword()}
+                onCompositionStart={() => {
+                  isComposingKeyword.current = true;
+                }}
+                onCompositionEnd={() => {
+                  isComposingKeyword.current = false;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  if (isComposingKeyword.current || e.nativeEvent.isComposing) {
+                    return;
+                  }
+                  e.preventDefault();
+                  addKeyword();
+                }}
                 className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
               <button
@@ -348,22 +405,11 @@ export function GenerateScreen({
             )}
           </button>
           {isGenerating && (
-            <div className="mt-2">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-primary transition-[width] duration-200 ease-out"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="mt-1 text-right text-xs text-muted-foreground">
-                진행률 {progress}%
-              </p>
+            <div className="mt-2 flex items-center justify-center gap-1.5 text-muted-foreground">
+              <span className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.2s]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.1s]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-primary" />
             </div>
-          )}
-          {error && (
-            <p className="text-sm text-red-500" role="alert">
-              {error}
-            </p>
           )}
         </div>
 
